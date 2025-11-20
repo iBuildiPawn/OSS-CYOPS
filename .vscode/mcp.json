@@ -1,0 +1,16 @@
+{
+  "servers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    },
+    "cyops": {
+      "command": "node",
+      "args": ["/home/dev/prod/CYOPS/mcp-server/dist/index.js"],
+      "env": {
+      "CYOPS_BACKEND_URL": "http://localhost:8080/api/v1",
+      "CYOPS_API_KEY": "cyops_mcp_XAZC5VCwXAI8Ecx7-FPggSWcf0ycwyoA"
+      }
+    }
+  }
+}
