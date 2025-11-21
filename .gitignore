@@ -203,8 +203,8 @@ sessions/
 # Nessus scan files (contain sensitive security data)
 *.nessus
 
-# Package managers
-package-lock.json
+# Package managers (keep package-lock.json for reproducible builds)
+# package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
