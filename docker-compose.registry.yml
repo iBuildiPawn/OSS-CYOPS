@@ -1,0 +1,177 @@
+# Docker Compose configuration using pre-built images from Docker registry
+# This allows deployment without cloning the source code
+# 
+# Usage: docker compose -f docker-compose.registry.yml --profile production up -d
+#
+# Prerequisites:
+# 1. Create .env file with required configuration
+# 2. Copy nginx/ directory with configuration files
+# 3. Ensure nginx/ssl/ has your SSL certificates (or use self-signed)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cyops-postgres
+    # Port not exposed - only accessible via internal Docker network
+    # Uncomment for local development only:
+    # ports:
+    #   - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cyops_dev}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cyops-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-cyops_dev}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cyops-redis
+    # Port not exposed - only accessible via internal Docker network
+    # Uncomment for local development only:
+    # ports:
+    #   - "6379:6379"
+    command: redis-server ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    volumes:
+      - redis_data:/data
+    networks:
+      - cyops-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    # Replace 'yourusername' with your Docker Hub username or registry URL
+    image: ${DOCKER_REGISTRY:-yourusername}/cyops-backend:${IMAGE_TAG:-latest}
+    container_name: cyops-backend
+    # Port not exposed - only accessible via NGINX reverse proxy
+    # Uncomment for local development only:
+    # ports:
+    #   - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-cyops_dev}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
+      - REDIS_URL=${REDIS_PASSWORD:+redis://:${REDIS_PASSWORD}@redis:6379}${REDIS_PASSWORD:-redis://redis:6379}
+      - PORT=8080
+      - GO_ENV=${GO_ENV:-production}
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin123!@#}
+      - ADMIN_NAME=${ADMIN_NAME:-System Administrator}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://cyops.example.com,https://www.cyops.example.com,http://192.168.20.21,https://192.168.20.21}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - FROM_EMAIL=${FROM_EMAIL:-noreply@yourapp.com}
+    volumes:
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cyops-network
+    restart: unless-stopped
+
+  frontend:
+    # Replace 'yourusername' with your Docker Hub username or registry URL
+    image: ${DOCKER_REGISTRY:-yourusername}/cyops-frontend:${IMAGE_TAG:-latest}
+    container_name: cyops-frontend
+    # Port not exposed - only accessible via NGINX reverse proxy
+    # Uncomment for local development only:
+    # ports:
+    #   - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+    depends_on:
+      - backend
+    networks:
+      - cyops-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: cyops-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - cyops-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  mcp-server:
+    # Replace 'yourusername' with your Docker Hub username or registry URL
+    image: ${DOCKER_REGISTRY:-yourusername}/cyops-mcp-server:${IMAGE_TAG:-latest}
+    container_name: cyops-mcp-server
+    # Port not exposed - only accessible via NGINX reverse proxy
+    # Uncomment for local development only:
+    # ports:
+    #   - "3001:3001"
+    environment:
+      - CYOPS_BACKEND_URL=http://backend:8080/api/v1
+      - CYOPS_API_KEY=${CYOPS_API_KEY:-}
+      - CYOPS_API_TOKEN=${CYOPS_API_TOKEN:-}
+      - MCP_PORT=3001
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://cyops.example.com,https://www.cyops.example.com,http://192.168.20.21,https://192.168.20.21}
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    networks:
+      - cyops-network
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    # Run HTTP/SSE server by default for web access
+    # For stdio transport (Claude Desktop), use: docker-compose exec mcp-server node /app/dist/index.js
+    command: ["node", "/app/dist/http-server.js"]
+    # Note: MCP server can be enabled/disabled via Admin Settings UI
+    # The setting is stored in the database (system_settings table)
+    profiles:
+      - production
+      - with-mcp
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  cyops-network:
+    driver: bridge

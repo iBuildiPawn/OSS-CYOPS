@@ -17,6 +17,10 @@
 
 ---
 
+> 🚀 **Deploy in 30 seconds:** See our [Quick Deploy Guide](QUICK-DEPLOY.md) for one-command installation!
+
+---
+
 ## 📋 Table of Contents
 
 - [Overview](#-overview)
@@ -170,16 +174,78 @@
 ### Prerequisites
 
 - **Docker** 20.10+ and **Docker Compose** 2.0+
-- **Git** for cloning the repository
 - 4GB RAM minimum (8GB recommended)
 - 10GB free disk space
 
-### Installation
+### One-Command Installation ⚡
+
+The fastest way to deploy CYOPS - fully automated with secure defaults:
+
+#### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/deploy.sh | bash
+```
+
+#### Windows (PowerShell as Administrator)
+
+```powershell
+irm https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/deploy.ps1 | iex
+```
+
+**That's it!** The script will:
+- ✅ Download all required files
+- ✅ Generate secure passwords and secrets
+- ✅ Pull Docker images from Docker Hub
+- ✅ Start all services
+- ✅ Display your admin credentials
+
+Access CYOPS at **http://localhost** and login with the credentials shown.
+
+---
+
+### Manual Installation Methods
+
+<details>
+<summary><b>Method 1: From Docker Registry (Step-by-Step)</b></summary>
+
+Deploy using pre-built Docker images:
+
+```bash
+# 1. Create project directory
+mkdir cyops && cd cyops
+
+# 2. Download docker-compose file
+curl -o docker-compose.yml https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/docker-compose.registry.yml
+
+# 3. Download nginx configuration
+mkdir -p nginx
+curl -o nginx/nginx.conf https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/nginx/nginx.conf
+
+# 4. Download environment template
+curl -o .env https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/.env.registry.example
+
+# 5. Edit .env to configure (set DOCKER_REGISTRY=devsenas)
+nano .env
+
+# 6. Start all services
+docker compose --profile production up -d
+
+# 7. Wait for services to be healthy (30-60 seconds)
+docker compose ps
+```
+
+</details>
+
+<details>
+<summary><b>Method 2: From GitHub Repository (For Development)</b></summary>
+
+Clone the repository to build images locally:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/CYOPS.git
-cd CYOPS
+git clone https://github.com/iBuildiPawn/OSS-CYOPS.git
+cd OSS-CYOPS
 
 # 2. Copy environment configuration
 cp .env.example .env
@@ -194,6 +260,8 @@ docker compose --profile production up -d
 docker compose ps
 ```
 
+</details>
+
 ### Access the Platform
 
 | Service | URL | Description |
@@ -206,6 +274,13 @@ docker compose ps
 
 ### Default Credentials
 
+**One-Command Install:**
+```
+Email: admin@cyops.local
+Password: (shown at end of installation)
+```
+
+**Manual Install:**
 ```
 Email: admin@example.com
 Password: Admin123!@#
@@ -221,10 +296,50 @@ Password: Admin123!@#
 
 Docker deployment includes all required services with optimized production settings.
 
-```bash
-# Start with production profile (includes NGINX reverse proxy)
-docker compose --profile production up -d
+#### Option A: Using Pre-built Images from Docker Hub
 
+Fastest deployment method using official Docker images:
+
+```bash
+# 1. Create deployment directory
+mkdir cyops && cd cyops
+
+# 2. Download required files
+curl -O https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/docker-compose.registry.yml
+curl -O https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/.env.registry.example
+mkdir -p nginx
+curl -o nginx/nginx.conf https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/nginx/nginx.conf
+
+# 3. Configure environment
+mv .env.registry.example .env
+nano .env  # Edit: Set DOCKER_REGISTRY=devsenas and other settings
+
+# 4. Start services
+mv docker-compose.registry.yml docker-compose.yml
+docker compose --profile production up -d
+```
+
+**Available Docker Images:**
+- `devsenas/cyops-backend:latest` - Go backend API
+- `devsenas/cyops-frontend:latest` - Next.js frontend
+- `devsenas/cyops-mcp-server:latest` - MCP server
+
+#### Option B: Building from Source
+
+Build images locally from source code:
+
+```bash
+# Clone and start
+git clone https://github.com/iBuildiPawn/OSS-CYOPS.git
+cd OSS-CYOPS
+cp .env.example .env
+nano .env  # Configure settings
+docker compose --profile production up -d
+```
+
+#### Common Commands
+
+```bash
 # View logs
 docker compose logs -f
 
@@ -233,6 +348,10 @@ docker compose down
 
 # Stop and remove volumes (⚠️ deletes all data)
 docker compose down -v
+
+# Update to latest images
+docker compose pull
+docker compose --profile production up -d
 ```
 
 ### Local Development Setup
@@ -727,33 +846,91 @@ docker compose -f docker-compose.test.yml down -v
 
 ## 🚀 Deployment
 
-### Production Deployment with Docker
+### Production Deployment with Docker Registry
+
+**Recommended for production servers** - uses pre-built, tested images:
 
 ```bash
-# 1. Set production environment variables
-cp .env.example .env
-nano .env  # Edit for production settings
+# 1. Create deployment directory on your server
+mkdir -p /opt/cyops && cd /opt/cyops
 
-# 2. Generate secure secrets
+# 2. Download deployment files
+curl -o docker-compose.yml https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/docker-compose.registry.yml
+curl -o .env https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/.env.registry.example
+mkdir -p nginx
+curl -o nginx/nginx.conf https://raw.githubusercontent.com/iBuildiPawn/OSS-CYOPS/main/nginx/nginx.conf
+
+# 3. Generate secure secrets
 JWT_SECRET=$(openssl rand -base64 32)
 SESSION_SECRET=$(openssl rand -base64 32)
 ENCRYPTION_KEY=$(openssl rand -base64 32)
 
-# Update .env with generated secrets
+# 4. Configure environment
+nano .env
+# Required settings:
+# - DOCKER_REGISTRY=devsenas
+# - IMAGE_TAG=latest (or specific version like v1.0.0)
+# - JWT_SECRET, SESSION_SECRET, ENCRYPTION_KEY (from step 3)
+# - DB_PASSWORD, ADMIN_PASSWORD, etc.
 
-# 3. Start services with production profile
+# 5. Start services with production profile
 docker compose --profile production up -d
 
-# 4. Verify all services are running
+# 6. Verify all services are running
 docker compose ps
 
-# 5. Check logs
+# 7. Check logs
 docker compose logs -f
 
-# 6. Access application
+# 8. Access application
 # Configure DNS to point to your server
 # Access via http://yourdomain.com
 ```
+
+### Version Management
+
+Control which version to deploy using the `IMAGE_TAG` environment variable:
+
+```bash
+# Deploy specific version
+echo "IMAGE_TAG=v1.0.0" >> .env
+docker compose --profile production up -d
+
+# Update to latest version
+echo "IMAGE_TAG=latest" >> .env
+docker compose pull
+docker compose --profile production up -d
+
+# Rollback to previous version
+echo "IMAGE_TAG=v1.0.0" >> .env
+docker compose --profile production up -d
+```
+
+### Building and Publishing Custom Images
+
+If you need to customize and publish your own images:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/iBuildiPawn/OSS-CYOPS.git
+cd OSS-CYOPS
+
+# 2. Login to Docker Hub
+docker login
+
+# 3. Build and push images
+# Windows PowerShell:
+.\build-and-push.ps1 -Registry "yourusername" -Version "v1.0.0"
+
+# Linux/Mac:
+./build-and-push.sh yourusername v1.0.0
+
+# 4. Update .env on deployment server
+DOCKER_REGISTRY=yourusername
+IMAGE_TAG=v1.0.0
+```
+
+See [DOCKER_REGISTRY.md](DOCKER_REGISTRY.md) for detailed instructions on building and publishing images.
 
 ### SSL/TLS Configuration
 
@@ -845,8 +1022,8 @@ We welcome contributions from the community! Here's how you can help:
 
 1. **Fork the Repository**
    ```bash
-   git clone https://github.com/yourusername/CYOPS.git
-   cd CYOPS
+   git clone https://github.com/iBuildiPawn/OSS-CYOPS.git
+   cd OSS-CYOPS
    ```
 
 2. **Create a Feature Branch**
@@ -908,12 +1085,14 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 📚 [API Documentation](http://localhost/api/v1/docs)
 - 📖 [MCP Server Guide](mcp-server/docs/README.md)
 - 🏗️ [Project Status](PROJECT-STATUS.md)
+- 🐳 [Docker Registry Guide](DOCKER_REGISTRY.md)
 
 ### Getting Help
 
-- 🐛 [Issue Tracker](https://github.com/yourusername/CYOPS/issues)
-- 💡 [Discussions](https://github.com/yourusername/CYOPS/discussions)
+- 🐛 [Issue Tracker](https://github.com/iBuildiPawn/OSS-CYOPS/issues)
+- 💡 [Discussions](https://github.com/iBuildiPawn/OSS-CYOPS/discussions)
 - 📧 Email Support: support@example.com
+- 🐳 [Docker Hub Images](https://hub.docker.com/u/devsenas)
 
 ---
 
