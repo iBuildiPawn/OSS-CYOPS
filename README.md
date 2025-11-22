@@ -1086,6 +1086,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 📖 [MCP Server Guide](mcp-server/docs/README.md)
 - 🏗️ [Project Status](PROJECT-STATUS.md)
 - 🐳 [Docker Registry Guide](DOCKER_REGISTRY.md)
+- 🚀 [Quick Deploy Guide](QUICK-DEPLOY.md)
+- 🔧 [Troubleshooting Guide](TROUBLESHOOTING.md)
 
 ### Getting Help
 
