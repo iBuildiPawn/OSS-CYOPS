@@ -88,7 +88,7 @@ BUILD_TARGET=production
 # CORS Origins (Update with your domain)
 CORS_ORIGINS=http://localhost,http://127.0.0.1
 
-# API URL (empty for relative paths)
+# API URL (empty to route through NGINX proxy)
 NEXT_PUBLIC_API_URL=
 
 # Email Configuration (Optional - leave blank if not using)
